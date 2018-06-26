@@ -22,6 +22,7 @@
     "@braintree/wrap-promise": "1.1.1",
     "card-validator": "4.3.0",
     "credit-card-type": "6.3.0",
+    "crypto-browserify": "^3.12.0",
     "framebus": "3.0.1",
     "inject-stylesheet": "1.0.0",
     "promise-polyfill": "7.0.2",

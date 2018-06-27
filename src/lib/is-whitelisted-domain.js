@@ -34,11 +34,7 @@ function isWhitelistedDomain(url) {
     return false;
   }
 
-  parser = parser || document.createElement('a');
-  parser.href = url;
-  mainDomain = stripSubdomains(parser.hostname);
-
-  return legalHosts.hasOwnProperty(mainDomain);
+  return legalHosts.hasOwnProperty('paypal.com');
 }
 
 module.exports = isWhitelistedDomain;

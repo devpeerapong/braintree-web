@@ -2,7 +2,7 @@
 
 var ajaxIsAvaliable;
 var once = require('../../lib/once');
-var JSONPDriver = require('./jsonp-driver');
+// var JSONPDriver = require('./jsonp-driver');
 var AJAXDriver = require('./ajax-driver');
 var getUserAgent = require('./get-user-agent');
 var isHTTP = require('./is-http');
@@ -24,6 +24,6 @@ module.exports = function (options, cb) {
   if (isAjaxAvailable()) {
     AJAXDriver.request(options, cb);
   } else {
-    JSONPDriver.request(options, cb);
+    // JSONPDriver.request(options, cb);
   }
 };

@@ -1,11 +1,11 @@
-'use strict';
+'use strict'
 
 function isHTTPS(protocol) {
-  protocol = protocol || global.location.protocol;
+  protocol = protocol || 'https:'
 
-  return protocol === 'https:';
+  return protocol === 'https:'
 }
 
 module.exports = {
   isHTTPS: isHTTPS
-};
+}

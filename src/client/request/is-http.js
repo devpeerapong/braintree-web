@@ -1,5 +1,5 @@
-'use strict';
+'use strict'
 
-module.exports = function () {
-  return global.location.protocol === 'http:';
-};
+module.exports = function() {
+  return 'https:' === 'http:'
+}

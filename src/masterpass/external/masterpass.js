@@ -1,18 +1,19 @@
-'use strict';
+'use strict'
 
-var Promise = require('../../lib/promise');
-var frameService = require('../../lib/frame-service/external');
-var BraintreeError = require('../../lib/braintree-error');
-var errors = require('../shared/errors');
-var VERSION = process.env.npm_package_version;
-var methods = require('../../lib/methods');
-var wrapPromise = require('@braintree/wrap-promise');
-var analytics = require('../../lib/analytics');
-var convertMethodsToError = require('../../lib/convert-methods-to-error');
-var convertToBraintreeError = require('../../lib/convert-to-braintree-error');
-var constants = require('../shared/constants');
+var Promise = require('../../lib/promise')
+var frameService = require('../../lib/frame-service/external')
+var BraintreeError = require('../../lib/braintree-error')
+var errors = require('../shared/errors')
+var VERSION = process.env.npm_package_version
+var methods = require('../../lib/methods')
+var wrapPromise = require('@braintree/wrap-promise')
+var analytics = require('../../lib/analytics')
+var convertMethodsToError = require('../../lib/convert-methods-to-error')
+var convertToBraintreeError = require('../../lib/convert-to-braintree-error')
+var constants = require('../shared/constants')
 
-var INTEGRATION_TIMEOUT_MS = require('../../lib/constants').INTEGRATION_TIMEOUT_MS;
+var INTEGRATION_TIMEOUT_MS = require('../../lib/constants')
+  .INTEGRATION_TIMEOUT_MS
 
 /**
  * Masterpass Address object.
@@ -60,41 +61,60 @@ var INTEGRATION_TIMEOUT_MS = require('../../lib/constants').INTEGRATION_TIMEOUT_
  * @classdesc This class represents an Masterpass component. Instances of this class have methods for launching a new window to process a transaction with Masterpass.
  */
 function Masterpass(options) {
-  var configuration = options.client.getConfiguration();
+  var configuration = options.client.getConfiguration()
 
-  this._client = options.client;
-  this._assetsUrl = configuration.gatewayConfiguration.assetsUrl + '/web/' + VERSION;
-  this._isDebug = configuration.isDebug;
-  this._authInProgress = false;
-  if (global.popupBridge && typeof global.popupBridge.getReturnUrlPrefix === 'function') {
-    this._callbackUrl = global.popupBridge.getReturnUrlPrefix() + 'return';
+  this._client = options.client
+  this._assetsUrl =
+    configuration.gatewayConfiguration.assetsUrl + '/web/' + VERSION
+  this._isDebug = configuration.isDebug
+  this._authInProgress = false
+  if (
+    global.popupBridge &&
+    typeof global.popupBridge.getReturnUrlPrefix === 'function'
+  ) {
+    this._callbackUrl = global.popupBridge.getReturnUrlPrefix() + 'return'
   } else {
-    this._callbackUrl = this._assetsUrl + '/html/masterpass-redirect-frame' + (this._isDebug ? '' : '.min') + '.html';
+    this._callbackUrl =
+      this._assetsUrl +
+      '/html/masterpass-redirect-frame' +
+      (this._isDebug ? '' : '.min') +
+      '.html'
   }
 }
 
-Masterpass.prototype._initialize = function () {
-  var self = this;
+Masterpass.prototype._initialize = function() {
+  var self = this
 
-  return new Promise(function (resolve) {
-    var failureTimeout = setTimeout(function () {
-      analytics.sendEvent(self._client, 'masterpass.load.timed-out');
-    }, INTEGRATION_TIMEOUT_MS);
+  return new Promise(function(resolve) {
+    var failureTimeout = setTimeout(function() {
+      analytics.sendEvent(self._client, 'masterpass.load.timed-out')
+    }, INTEGRATION_TIMEOUT_MS)
 
-    frameService.create({
-      name: constants.LANDING_FRAME_NAME,
-      height: constants.POPUP_HEIGHT,
-      width: constants.POPUP_WIDTH,
-      dispatchFrameUrl: self._assetsUrl + '/html/dispatch-frame' + (self._isDebug ? '' : '.min') + '.html',
-      openFrameUrl: self._assetsUrl + '/html/masterpass-landing-frame' + (self._isDebug ? '' : '.min') + '.html'
-    }, function (service) {
-      self._frameService = service;
-      clearTimeout(failureTimeout);
-      analytics.sendEvent(self._client, 'masterpass.load.succeeded');
-      resolve(self);
-    });
-  });
-};
+    frameService.create(
+      {
+        name: constants.LANDING_FRAME_NAME,
+        height: constants.POPUP_HEIGHT,
+        width: constants.POPUP_WIDTH,
+        dispatchFrameUrl:
+          self._assetsUrl +
+          '/html/dispatch-frame' +
+          (self._isDebug ? '' : '.min') +
+          '.html',
+        openFrameUrl:
+          self._assetsUrl +
+          '/html/masterpass-landing-frame' +
+          (self._isDebug ? '' : '.min') +
+          '.html'
+      },
+      function(service) {
+        self._frameService = service
+        clearTimeout(failureTimeout)
+        analytics.sendEvent(self._client, 'masterpass.load.succeeded')
+        resolve(self)
+      }
+    )
+  })
+}
 
 /**
  * Launches the Masterpass flow and returns a nonce payload. Only one Masterpass flow should be active at a time. One way to achieve this is to disable your Masterpass button while the flow is open.
@@ -152,200 +172,270 @@ Masterpass.prototype._initialize = function () {
  *   });
  * });
  */
-Masterpass.prototype.tokenize = function (options) {
-  var self = this;
+Masterpass.prototype.tokenize = function(options) {
+  var self = this
 
   if (!options || hasMissingOption(options)) {
-    return Promise.reject(new BraintreeError(errors.MASTERPASS_TOKENIZE_MISSING_REQUIRED_OPTION));
+    return Promise.reject(
+      new BraintreeError(errors.MASTERPASS_TOKENIZE_MISSING_REQUIRED_OPTION)
+    )
   }
 
   if (self._authInProgress) {
-    return Promise.reject(new BraintreeError(errors.MASTERPASS_TOKENIZATION_ALREADY_IN_PROGRESS));
+    return Promise.reject(
+      new BraintreeError(errors.MASTERPASS_TOKENIZATION_ALREADY_IN_PROGRESS)
+    )
   }
 
-  return new Promise(function (resolve, reject) {
-    self._navigateFrameToLoadingPage(options).catch(reject);
+  return new Promise(function(resolve, reject) {
+    self._navigateFrameToLoadingPage(options).catch(reject)
     // This MUST happen after _navigateFrameToLoadingPage for Metro browsers to work.
-    self._frameService.open(options.frameOptions, self._createFrameOpenHandler(resolve, reject));
-  });
-};
+    self._frameService.open(
+      options.frameOptions,
+      self._createFrameOpenHandler(resolve, reject)
+    )
+  })
+}
 
-Masterpass.prototype._navigateFrameToLoadingPage = function (options) {
-  var self = this;
+Masterpass.prototype._navigateFrameToLoadingPage = function(options) {
+  var self = this
 
-  this._authInProgress = true;
+  this._authInProgress = true
 
-  return this._client.request({
-    method: 'post',
-    endpoint: 'masterpass/request_token',
-    data: {
-      requestToken: {
-        originUrl: global.location.protocol + '//' + global.location.hostname,
-        subtotal: options.subtotal,
-        currencyCode: options.currencyCode,
-        callbackUrl: this._callbackUrl
+  return this._client
+    .request({
+      method: 'post',
+      endpoint: 'masterpass/request_token',
+      data: {
+        requestToken: {
+          originUrl: 'https:' + '//' + global.location.hostname,
+          subtotal: options.subtotal,
+          currencyCode: options.currencyCode,
+          callbackUrl: this._callbackUrl
+        }
       }
-    }
-  }).then(function (response) {
-    var redirectUrl = self._assetsUrl + '/html/masterpass-loading-frame' + (self._isDebug ? '' : '.min') + '.html?';
-    var gatewayConfiguration = self._client.getConfiguration().gatewayConfiguration;
-    var config = options.config || {};
-    var queryParams;
+    })
+    .then(function(response) {
+      var redirectUrl =
+        self._assetsUrl +
+        '/html/masterpass-loading-frame' +
+        (self._isDebug ? '' : '.min') +
+        '.html?'
+      var gatewayConfiguration = self._client.getConfiguration()
+        .gatewayConfiguration
+      var config = options.config || {}
+      var queryParams
 
-    queryParams = {
-      environment: gatewayConfiguration.environment,
-      requestToken: response.requestToken,
-      callbackUrl: self._callbackUrl,
-      merchantCheckoutId: gatewayConfiguration.masterpass.merchantCheckoutId,
-      allowedCardTypes: gatewayConfiguration.masterpass.supportedNetworks,
-      version: constants.MASTERPASS_VERSION
-    };
-
-    Object.keys(config).forEach(function (key) {
-      if (typeof config[key] !== 'function') {
-        queryParams[key] = config[key];
+      queryParams = {
+        environment: gatewayConfiguration.environment,
+        requestToken: response.requestToken,
+        callbackUrl: self._callbackUrl,
+        merchantCheckoutId: gatewayConfiguration.masterpass.merchantCheckoutId,
+        allowedCardTypes: gatewayConfiguration.masterpass.supportedNetworks,
+        version: constants.MASTERPASS_VERSION
       }
-    });
 
-    redirectUrl += Object.keys(queryParams).map(function (key) {
-      return key + '=' + queryParams[key];
-    }).join('&');
+      Object.keys(config).forEach(function(key) {
+        if (typeof config[key] !== 'function') {
+          queryParams[key] = config[key]
+        }
+      })
 
-    self._frameService.redirect(redirectUrl);
-  }).catch(function (err) {
-    var status = err.details && err.details.httpStatus;
+      redirectUrl += Object.keys(queryParams)
+        .map(function(key) {
+          return key + '=' + queryParams[key]
+        })
+        .join('&')
 
-    self._closeWindow();
+      self._frameService.redirect(redirectUrl)
+    })
+    .catch(function(err) {
+      var status = err.details && err.details.httpStatus
 
-    if (status === 422) {
-      return Promise.reject(convertToBraintreeError(err, errors.MASTERPASS_INVALID_PAYMENT_OPTION));
-    }
+      self._closeWindow()
 
-    return Promise.reject(convertToBraintreeError(err, errors.MASTERPASS_FLOW_FAILED));
-  });
-};
+      if (status === 422) {
+        return Promise.reject(
+          convertToBraintreeError(err, errors.MASTERPASS_INVALID_PAYMENT_OPTION)
+        )
+      }
 
-Masterpass.prototype._createFrameOpenHandler = function (resolve, reject) {
-  var self = this;
+      return Promise.reject(
+        convertToBraintreeError(err, errors.MASTERPASS_FLOW_FAILED)
+      )
+    })
+}
+
+Masterpass.prototype._createFrameOpenHandler = function(resolve, reject) {
+  var self = this
 
   if (global.popupBridge) {
-    return function (popupBridgeErr, payload) {
-      self._authInProgress = false;
+    return function(popupBridgeErr, payload) {
+      self._authInProgress = false
 
       if (popupBridgeErr) {
-        analytics.sendEvent(self._client, 'masterpass.tokenization.closed-popupbridge.by-user');
-        reject(convertToBraintreeError(popupBridgeErr, errors.MASTERPASS_POPUP_CLOSED));
+        analytics.sendEvent(
+          self._client,
+          'masterpass.tokenization.closed-popupbridge.by-user'
+        )
+        reject(
+          convertToBraintreeError(
+            popupBridgeErr,
+            errors.MASTERPASS_POPUP_CLOSED
+          )
+        )
 
-        return;
+        return
       } else if (!payload.queryItems) {
-        analytics.sendEvent(self._client, 'masterpass.tokenization.failed-popupbridge');
-        reject(new BraintreeError(errors.MASTERPASS_FLOW_FAILED));
+        analytics.sendEvent(
+          self._client,
+          'masterpass.tokenization.failed-popupbridge'
+        )
+        reject(new BraintreeError(errors.MASTERPASS_FLOW_FAILED))
 
-        return;
+        return
       }
 
-      self._tokenizeMasterpass(payload.queryItems).then(resolve).catch(reject);
-    };
+      self
+        ._tokenizeMasterpass(payload.queryItems)
+        .then(resolve)
+        .catch(reject)
+    }
   }
 
-  return function (frameServiceErr, payload) {
+  return function(frameServiceErr, payload) {
     if (frameServiceErr) {
-      self._authInProgress = false;
+      self._authInProgress = false
 
       if (frameServiceErr.code === 'FRAME_SERVICE_FRAME_CLOSED') {
-        analytics.sendEvent(self._client, 'masterpass.tokenization.closed.by-user');
-        reject(new BraintreeError(errors.MASTERPASS_POPUP_CLOSED));
+        analytics.sendEvent(
+          self._client,
+          'masterpass.tokenization.closed.by-user'
+        )
+        reject(new BraintreeError(errors.MASTERPASS_POPUP_CLOSED))
 
-        return;
+        return
       }
 
-      if (frameServiceErr.code && frameServiceErr.code.indexOf('FRAME_SERVICE_FRAME_OPEN_FAILED') > -1) {
-        analytics.sendEvent(self._client, 'masterpass.tokenization.failed.to-open');
-        reject(new BraintreeError({
-          code: errors.MASTERPASS_POPUP_OPEN_FAILED.code,
-          type: errors.MASTERPASS_POPUP_OPEN_FAILED.type,
-          message: errors.MASTERPASS_POPUP_OPEN_FAILED.message,
-          details: {
-            originalError: frameServiceErr
-          }
-        }));
+      if (
+        frameServiceErr.code &&
+        frameServiceErr.code.indexOf('FRAME_SERVICE_FRAME_OPEN_FAILED') > -1
+      ) {
+        analytics.sendEvent(
+          self._client,
+          'masterpass.tokenization.failed.to-open'
+        )
+        reject(
+          new BraintreeError({
+            code: errors.MASTERPASS_POPUP_OPEN_FAILED.code,
+            type: errors.MASTERPASS_POPUP_OPEN_FAILED.type,
+            message: errors.MASTERPASS_POPUP_OPEN_FAILED.message,
+            details: {
+              originalError: frameServiceErr
+            }
+          })
+        )
 
-        return;
+        return
       }
 
-      analytics.sendEvent(self._client, 'masterpass.tokenization.failed');
-      self._closeWindow();
-      reject(convertToBraintreeError(frameServiceErr, errors.MASTERPASS_FLOW_FAILED));
+      analytics.sendEvent(self._client, 'masterpass.tokenization.failed')
+      self._closeWindow()
+      reject(
+        convertToBraintreeError(frameServiceErr, errors.MASTERPASS_FLOW_FAILED)
+      )
 
-      return;
+      return
     }
 
-    self._tokenizeMasterpass(payload).then(resolve).catch(reject);
-  };
-};
+    self
+      ._tokenizeMasterpass(payload)
+      .then(resolve)
+      .catch(reject)
+  }
+}
 
-Masterpass.prototype._tokenizeMasterpass = function (payload) {
-  var self = this;
+Masterpass.prototype._tokenizeMasterpass = function(payload) {
+  var self = this
 
   if (payload.mpstatus !== 'success') {
-    analytics.sendEvent(self._client, 'masterpass.tokenization.closed.by-user');
-    self._closeWindow();
+    analytics.sendEvent(self._client, 'masterpass.tokenization.closed.by-user')
+    self._closeWindow()
 
-    return Promise.reject(new BraintreeError(errors.MASTERPASS_POPUP_CLOSED));
+    return Promise.reject(new BraintreeError(errors.MASTERPASS_POPUP_CLOSED))
   }
 
   if (isMissingRequiredPayload(payload)) {
-    analytics.sendEvent(self._client, 'masterpass.tokenization.closed.missing-payload');
-    self._closeWindow();
+    analytics.sendEvent(
+      self._client,
+      'masterpass.tokenization.closed.missing-payload'
+    )
+    self._closeWindow()
 
-    return Promise.reject(new BraintreeError(errors.MASTERPASS_POPUP_MISSING_REQUIRED_PARAMETERS));
+    return Promise.reject(
+      new BraintreeError(errors.MASTERPASS_POPUP_MISSING_REQUIRED_PARAMETERS)
+    )
   }
 
-  return self._client.request({
-    endpoint: 'payment_methods/masterpass_cards',
-    method: 'post',
-    data: {
-      masterpassCard: {
-        checkoutResourceUrl: payload.checkout_resource_url,
-        requestToken: payload.oauth_token,
-        verifierToken: payload.oauth_verifier
+  return self._client
+    .request({
+      endpoint: 'payment_methods/masterpass_cards',
+      method: 'post',
+      data: {
+        masterpassCard: {
+          checkoutResourceUrl: payload.checkout_resource_url,
+          requestToken: payload.oauth_token,
+          verifierToken: payload.oauth_verifier
+        }
       }
-    }
-  }).then(function (response) {
-    self._closeWindow();
-    if (global.popupBridge) {
-      analytics.sendEvent(self._client, 'masterpass.tokenization.success-popupbridge');
-    } else {
-      analytics.sendEvent(self._client, 'masterpass.tokenization.success');
-    }
+    })
+    .then(function(response) {
+      self._closeWindow()
+      if (global.popupBridge) {
+        analytics.sendEvent(
+          self._client,
+          'masterpass.tokenization.success-popupbridge'
+        )
+      } else {
+        analytics.sendEvent(self._client, 'masterpass.tokenization.success')
+      }
 
-    return response.masterpassCards[0];
-  }).catch(function (tokenizeErr) {
-    self._closeWindow();
-    if (global.popupBridge) {
-      analytics.sendEvent(self._client, 'masterpass.tokenization.failed-popupbridge');
-    } else {
-      analytics.sendEvent(self._client, 'masterpass.tokenization.failed');
-    }
+      return response.masterpassCards[0]
+    })
+    .catch(function(tokenizeErr) {
+      self._closeWindow()
+      if (global.popupBridge) {
+        analytics.sendEvent(
+          self._client,
+          'masterpass.tokenization.failed-popupbridge'
+        )
+      } else {
+        analytics.sendEvent(self._client, 'masterpass.tokenization.failed')
+      }
 
-    return Promise.reject(convertToBraintreeError(tokenizeErr, errors.MASTERPASS_ACCOUNT_TOKENIZATION_FAILED));
-  });
-};
+      return Promise.reject(
+        convertToBraintreeError(
+          tokenizeErr,
+          errors.MASTERPASS_ACCOUNT_TOKENIZATION_FAILED
+        )
+      )
+    })
+}
 
 function isMissingRequiredPayload(payload) {
   return [
     payload.oauth_verifier,
     payload.oauth_token,
     payload.checkout_resource_url
-  ].some(function (element) {
-    return element == null || element === 'null';
-  });
+  ].some(function(element) {
+    return element == null || element === 'null'
+  })
 }
 
-Masterpass.prototype._closeWindow = function () {
-  this._authInProgress = false;
-  this._frameService.close();
-};
+Masterpass.prototype._closeWindow = function() {
+  this._authInProgress = false
+  this._frameService.close()
+}
 
 /**
  * Cleanly tear down anything set up by {@link module:braintree-web/masterpass.create|create}.
@@ -359,32 +449,32 @@ Masterpass.prototype._closeWindow = function () {
  * });
  * @returns {Promise|void} Returns a promise if no callback is provided.
  */
-Masterpass.prototype.teardown = function () {
-  var self = this;
+Masterpass.prototype.teardown = function() {
+  var self = this
 
-  return new Promise(function (resolve) {
-    self._frameService.teardown();
+  return new Promise(function(resolve) {
+    self._frameService.teardown()
 
-    convertMethodsToError(self, methods(Masterpass.prototype));
+    convertMethodsToError(self, methods(Masterpass.prototype))
 
-    analytics.sendEvent(self._client, 'masterpass.teardown-completed');
+    analytics.sendEvent(self._client, 'masterpass.teardown-completed')
 
-    resolve();
-  });
-};
+    resolve()
+  })
+}
 
 function hasMissingOption(options) {
-  var i, option;
+  var i, option
 
   for (i = 0; i < constants.REQUIRED_OPTIONS_FOR_TOKENIZE.length; i++) {
-    option = constants.REQUIRED_OPTIONS_FOR_TOKENIZE[i];
+    option = constants.REQUIRED_OPTIONS_FOR_TOKENIZE[i]
 
     if (!options.hasOwnProperty(option)) {
-      return true;
+      return true
     }
   }
 
-  return false;
+  return false
 }
 
-module.exports = wrapPromise.wrapPrototype(Masterpass);
+module.exports = wrapPromise.wrapPrototype(Masterpass)

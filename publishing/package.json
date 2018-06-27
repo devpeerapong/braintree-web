@@ -1,5 +1,5 @@
 {
-  "name": "braintree-web",
+  "name": "braintree-web-publishing",
   "description": "A suite of tools for integrating Braintree in the browser",
   "version": "@VERSION",
   "main": "index.js",
